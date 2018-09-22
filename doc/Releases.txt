@@ -6,6 +6,7 @@
                  CHANGE:  use SWI's http_open/3 instead of curl. It should now be more OS tolerant.
                  DOC:     updated all examples. added Semantic Scholar support
                  SOURCE:  now on github: 
+                 ADDED:   Readme.txt
 
 --- older changes:
 
