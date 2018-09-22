@@ -21,7 +21,7 @@
 :- use_module(library(http/http_open)).   % http_open/3
 :- use_module(library(http/json)).        % json_read/2,3
 
-/**  <module> connect to publication services at pub_graph
+/**  <module> Access, cache and visualise citation relations in publications servers.
 
 A simple library for communicating with publication information servers: pub med and semantic scholar.<br>
 Currently allows (a) searching on conjunctions and disjunctions, (b) fetching the details of a paper <br>
