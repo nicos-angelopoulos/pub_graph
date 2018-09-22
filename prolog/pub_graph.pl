@@ -52,7 +52,7 @@ on proSQlite (both available as SWI packs and from
 
 @version 0.1.0 2014/7/22 (was pubmed)
 @version 1.0   2018/9/22
-@license Perl Artstic
+@license MIT
 @author Nicos Angelopoulos
 @see http://stoics.org.uk/~nicos/sware/pub_graph
 @see http://www.ncbi.nlm.nih.gov/books/NBK25500/
@@ -174,12 +174,12 @@ Get version information and date of publication.
 
 ==
 ?- pub_graph_version(V,D).
-V = 0:1:0,
+V = 1:0:0,
 D = date(2018, 9, 22).
 ==
 
 */
-pub_graph_version( 0:1:0, date(2018,9,22) ).
+pub_graph_version( 1:0:0, date(2018,9,22) ).
 % pub_graph_version( 0:0:3, date(2012,08,15) ).
 
 
