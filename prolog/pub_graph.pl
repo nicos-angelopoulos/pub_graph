@@ -52,6 +52,7 @@ on proSQlite (both available as SWI packs and from http://stoics.org.uk/~nicos/s
 
 @version 0.1.0 2014/7/22 (was pubmed)
 @version 1.0   2018/9/22
+@version 1.1   2018/9/23, wrap/hide caching libs errors
 @license MIT
 @author Nicos Angelopoulos
 @see http://stoics.org.uk/~nicos/sware/pub_graph
@@ -74,13 +75,19 @@ on proSQlite (both available as SWI packs and from http://stoics.org.uk/~nicos/s
 :- use_module( library(options) ).
 
 % This does (no longer ?) work: [try abs_fname/n]
-:- ( use_module(library(prosqlite)) -> true
-     ;  nl, write( 'proSQLite not available. Caching through prosqlite disabled.' ), nl, nl ).
+:- ( catch(use_module(library(prosqlite)),_,fail) -> true
+     ;  
+     debug(pub_graph, 'proSQLite not available. Caching through prosqlite disabled', [] ) 
+   ).
 
-:- ( use_module(library(odbc)) -> true
-     ;  nl, write( 'odbc library is not available. Caching through odbc disabled.' ), nl, nl ).
-
-:- use_module( library(db_facts) ).
+:- ( catch(use_module(library(odbc)),_,fail) -> true
+     ;  
+     debug(pub_graph, 'proSQLite not available. Caching through odbc disabled', [] ) 
+   ).
+:- ( catch(use_module(library(db_facts)),_,fail) -> true
+     ;  
+     debug(pub_graph, 'pack(db_facts) not available. Caching is disabled', [] ) 
+   ).
 
 % Section: defaults, shortcuts.
 
@@ -180,12 +187,13 @@ Get version information and date of publication.
 ?-
     pub_graph_version(V,D).
 
-V = 1:0:0,
-D = date(2018, 9, 22).
+V = 1:1:0,
+D = date(2018, 9, 23).
 ==
 
 */
-pub_graph_version( 1:0:0, date(2018,9,22) ).
+pub_graph_version( 1:1:0, date(2018,9,23) ).
+% pub_graph_version( 1:0:0, date(2018,9,22) ).
 % pub_graph_version( 0:0:3, date(2012,08,15) ).
 
 
