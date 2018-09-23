@@ -332,15 +332,6 @@ Len = 100.
 	Title=Prevalence of pain in patients with breast cancer post-treatment: A systematic review.
 ----
 true.
-
-?- pub_graph_summary_display( cbd251a03b1a29a94f7348f4f5c2f830ab80a909, _, true ).
-----
-1:cbd251a03b1a29a94f7348f4f5c2f830ab80a909
-	authors=[Graham J. L. Kemp,Nicos Angelopoulos,Peter M. D. Gray]
-	title=Architecture of a mediator for a bioinformatics database federation
-----
-true.
-
 ==
 
 @author nicos angelopoulos
@@ -444,8 +435,6 @@ C = '22215819'.
     PubType=Journal Article
     FullJournalName=Therapeutic innovation & regulatory science
 ----
-Opts = display(*).
-
 ==
 
 ==
@@ -469,7 +458,7 @@ Opts = display(*).
     Title=Axon growth regulation by a bistable molecular switch.
     PubDate=2018 Apr 25
 ...
-----
+...
 26:20473365
     Author=[Welf ES,Haugh JM]
     Title=Stochastic Dynamics of Membrane Protrusion Mediated by the DOCK180/Rac Pathway in Migrating Cells.
@@ -654,7 +643,7 @@ D = date(2018, 9, 22),
 Ids = ['19160484', '19118212', '18955554', '18800171', '18586481'|...],
 Len = 38.
 
-% pubmed does not have references cited in this paper:
+% pubmed does not have references cited by the following paper:
 
 ?- 
     date(D), 
@@ -1303,8 +1292,10 @@ Ns is the empty list if V has no neighbours, although this should
 only be the case here, if one of the input Ids has no citing papers 
 or for the nodes at the edge of Depth.
   
+==
 ?- 
      pub_graph_cited_by_graph( 12075665, G, cache(sqlite) ).
+==
 
 */
 pub_graph_cited_by_graph( IdS, Graph, Args ) :-
