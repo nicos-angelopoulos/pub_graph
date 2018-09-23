@@ -1066,7 +1066,7 @@ pub_graph_get_abstracts( Ids, Ibs ) :-
     RtpReq = 'rettype=abstract',
     atomic_list_concat( [EEReq,IdsReq,RmdReq,RtpReq], '&', Url ),
     get_url_in_file( Url, true, Tmp ),
-    write( file_is(Tmp) ), nl,
+    % write( file_is(Tmp) ), nl,
     file_abstracts( Tmp, Ibs ).
 
 file_abstracts( File, Ibs ) :-
@@ -1076,11 +1076,11 @@ file_abstracts( File, Ibs ) :-
 
 % Each abstract-entry has sections seperated by \n.
 codes_abstracts( Codes, Ibs ) :-
-    write( codes(Codes) ), nl,
+    % write( codes(Codes) ), nl,
     codes_abstracts_sections( Sections, [], Codes, [] ),
-    length( Sections, Len ),
-    maplist( write_codes_ln, Sections ),
-    write( sections_length(Len) ), nl,
+    % length( Sections, Len ),
+    % maplist( write_codes_ln, Sections ),
+    % write( sections_length(Len) ), nl,
     code_sections_abstracts( Sections, Ibs ).
 
 write_codes_ln( Codes ) :-
@@ -1091,8 +1091,9 @@ codes_abstracts_sections( Sects, Acc ) -->
     "\n\n", consume_new_line,
     !,
     { ( Acc==[] -> Sects=TSects; 
-        reverse(Acc,Sect),Sects=[Sect|TSects],
-         atom_codes( Att, Sect), write( att_acc(Att,Acc) ), nl ) },
+        reverse(Acc,Sect),Sects=[Sect|TSects]
+         %, atom_codes( Att, Sect), write( att_acc(Att,Acc) ), nl 
+      ) },
     codes_abstracts_sections( TSects, [] ).
 codes_abstracts_sections( Sects, Acc ) -->
     [C],
@@ -1101,8 +1102,8 @@ codes_abstracts_sections( Sects, Acc ) -->
 codes_abstracts_sections( Sects, Acc ) -->
     { ( Acc == [] -> Sects = []
                  ; reverse( Acc, Sect ), 
-                atom_codes( SectAtom, Sect ),
-                write( section(SectAtom,Acc) ), nl,
+                % atom_codes( SectAtom, Sect ),
+                % write( section(SectAtom,Acc) ), nl,
                  Sects = [Sect] ) }.
 
 consume_new_line --> "\n", {!}.
@@ -1375,7 +1376,8 @@ pub_graph_cited_by_treadmill( Ids, Graph, Args ) :-
 pub_graph_cited_by_treadmill_deepening( Di, topts(Dlim,_,_), _Ids, Graph, Graph ) :-
      Di > Dlim,
      !, 
-     write( overall_depth_limit_reached(Dlim) ), nl.
+     % write( overall_depth_limit_reached(Dlim) ), nl.
+     true.
 pub_graph_cited_by_treadmill_deepening( Di, Topts, Ids, _Current, Graph ) :-
      Topts = topts(Dlim,File,Single),
      Opts = [verbose(true),cache(prolog,_,date(2012,09,01),true),depth(Di),verbose(true)],
@@ -1481,14 +1483,14 @@ pub_graph_create_sqlite_type_statement( info, 'CREATE TABLE info (pubmed_id bigi
 
 /** pub_graph_cache_save( +Type, +FileinORHandle, What, Opts ).
 
-     Close or save a cache to a file. Currently Types csv, `prolog', `odbc' and `sqlite' are recognised.
-     In the case of prolog,  the list of predicates What is dumped to the prolog file Filein. Likewise
-     for `csv' but as data rows.
-     The predicates are looked for in module `pub_graph_cache'.
-     Once the preds are saved, their retracted from memory.
+Close or save a cache to a file. Currently Types csv, `prolog', `odbc' and `sqlite' are recognised.
+In the case of prolog,  the list of predicates What is dumped to the prolog file Filein. Likewise
+for `csv' but as data rows.  The predicates are looked for in module `pub_graph_cache'.
+Once the preds are saved, their retracted from memory.
 
-     Opts a term or list of terms from: 
-          flat(Flat)  should csv and prolog rows be compressed by third argument ? 
+Opts a term or list of terms from: 
+  * flat(Flat)  
+     should csv and prolog rows be compressed by third argument ? 
 */
 pub_graph_cache_save( prolog, FileIn, WhatIf, Opts ) :-
      pub_graph_cache_save( in_mem,  prolog, FileIn, WhatIf, Opts ).
