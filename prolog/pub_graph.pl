@@ -33,7 +33,7 @@ and  odbc connected or sqlite databases. Also as of 0.1 pub_graph is debug/1 awa
 the progress of execution, use
 
 ==
- ?- debug( pub_graph ). 
+    ?- debug(pub_graph). 
 ==
 
 The pack requires the curl executable to be in the path. Only tested on Linux.<br>
@@ -42,13 +42,13 @@ It is being developed on SWI-Prolog 6.1.8 and it should also work on Yap Prolog.
 To install under SWI simply do 
 
 ==
-     ?- pack_install( pub_graph ).
+    ?- pack_install(pub_graph).
+    % and load with
+    ?- use_module(library(pub_graph)).
 ==
 
 The storing of paper and citation depends on db_facts and for sqlite connectivity
-on proSQlite (both available as SWI packs and from 
-     http://stoics.org.uk/~nicos/sware/
-)
+on proSQlite (both available as SWI packs and from http://stoics.org.uk/~nicos/sware/)
 
 @version 0.1.0 2014/7/22 (was pubmed)
 @version 1.0   2018/9/22
@@ -105,9 +105,9 @@ default_names( ncbi, Names ) :-
 
 pub_graph_search_defaults( [verbose(false),retmax(100),tmp_keep(false)] ).
 
-pub_graph_summary_display_defaults( [display(['Title','Author']),names(Names)] ) :-
-     default_names( Names ).
-     
+% pub_graph_summary_display_defaults( [display(['Title','Author']),names(Names)] ) :-
+%     default_names( Names ).
+pub_graph_summary_display_defaults( [display([title,'Title',authors,'Author'])] ).
 
 pub_graph_graph(true).  % needed for options_append/3
 pub_graph_graph_defaults( [depth(0),verbose(false),update(true),date(AgesAgo),flat(false)] ) :-
@@ -138,10 +138,14 @@ There are three term forms for =semscholar=.
 The following two ids correspond to the same paper.
 
 ==
-?- pub_graph_id( 12075665, Type ).
+?- 
+    pub_graph_id( 12075665, Type ).
+
 Type = ncbi.
 
-?- pub_graph_id( cbd251a03b1a29a94f7348f4f5c2f830ab80a909, Type ).
+?-
+    pub_graph_id( cbd251a03b1a29a94f7348f4f5c2f830ab80a909, Type ).
+
 Type = semscholar.
 ==
 
@@ -173,7 +177,9 @@ pub_graph_id( Term, IdType ) :-
 Get version information and date of publication.
 
 ==
-?- pub_graph_version(V,D).
+?-
+    pub_graph_version(V,D).
+
 V = 1:0:0,
 D = date(2018, 9, 22).
 ==
@@ -230,7 +236,10 @@ Options should be a term or list of terms from:
      all breast cancer articles that were published in Science in 2008.
 ==
 ?-
-?- St = (journal=science,[breast,cancer],pdat=2008),                                                                                                      pub_graph_search( St, Ids, [verbose(true),qtranslation(QTrans)] ),                                                                                     length( Ids, Len ), write( number_of:Len ), nl,                                                                                                        pub_graph_summary_display( Ids, _, display(all) ).
+    St = (journal=science,[breast,cancer],pdat=2008),
+    pub_graph_search( St, Ids, [verbose(true),qtranslation(QTrans)] ),
+    length( Ids, Len ), write( number_of:Len ), nl,
+    pub_graph_summary_display( Ids, _, display(all) ).
 
 https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmax=100&term=science[journal]+AND+breast+cancer+AND+2008[pdat]
 tmp_file(/tmp/swipl_3884_9)
@@ -289,7 +298,8 @@ Ids = ['29894693', '29256493', '28821557', '27021571', '26774285', '26530471', '
 Len = 83.
 
 ?-
-    date(Date), pub_graph_search( prolog, Ids ), length( Ids, Len ), write( number_of:Len ), nl.
+    date(Date), pub_graph_search( prolog, Ids ), 
+    length( Ids, Len ), write( number_of:Len ), nl.
 
 number_of:100
 Date = date(2018, 9, 22),
@@ -306,16 +316,36 @@ Ids = ['30089663', '28647861', '28486579', '27684214', '27142769', '25509153', '
 Len = 127.
 
 ?-
-   date(Date), pub_graph_search( ('breast','cancer','Publication Type'='Review'), Ids, reldate(30) ),
+   St = ('breast','cancer','Publication Type'='Review'),
+   date(Date), pub_graph_search( St, Ids, reldate(30) ),
    length( Ids, Len ).
 
 Date = date(2018, 9, 22),
 Ids = ['30240898', '30240537', '30240152', '30238542', '30238005', '30237735', '30236642', '30236594', '30234119'|...],
 Len = 100.
 
+?- 
+    pub_graph_summary_display( 30243159, _, true ).
+----
+1:30243159
+	Author=[Wang K,Yee C,Tam S,Drost L,Chan S,Zaki P,Rico V,Ariello K,Dasios M,Lam H,DeAngelis C,Chow E]
+	Title=Prevalence of pain in patients with breast cancer post-treatment: A systematic review.
+----
+true.
+
+?- pub_graph_summary_display( cbd251a03b1a29a94f7348f4f5c2f830ab80a909, _, true ).
+----
+1:cbd251a03b1a29a94f7348f4f5c2f830ab80a909
+	authors=[Graham J. L. Kemp,Nicos Angelopoulos,Peter M. D. Gray]
+	title=Architecture of a mediator for a bioinformatics database federation
+----
+true.
+
 ==
+
 @author nicos angelopoulos
 @version  0:1 2012/07/15
+@version  0:2 2018/09/22, small update on \ escape on eutils, ncbi, queries
 
 */
 pub_graph_search( Sterm, Ids, Args ) :-
@@ -369,7 +399,11 @@ Opts
      Disp values of var(Disp), '*' and 'all', list all available values.
 
 ==
-?-  date(Date), pub_graph_search((programming,'Prolog'), Ids), length( Ids, Len), Ids = [A,B,C|_], pub_graph_summary_display( [A,B,C] ).
+?-  
+    date(Date), 
+    pub_graph_search((programming,'Prolog'), Ids), 
+    length( Ids, Len), 
+    Ids = [A,B,C|_], pub_graph_summary_display( [A,B,C] ).
 
 ----
 1:28486579
@@ -393,7 +427,9 @@ C = '22215819'.
 ==
 
 ==
-?- Opts = display(*), pub_graph_summary_display( 30235570, _, Opts ).
+?- 
+    pub_graph_summary_display( 30235570, _, display(*) ).
+
 ----
 1:30235570
     Author=[Morgan CC,Huyck S,Jenkins M,Chen L,Bedding A,Coffey CS,Gaydos B,Wathen JK]
@@ -414,7 +450,9 @@ Opts = display(*).
 
 ==
 ?-
-     pub_graph_cited_by( 20195494, These ), pub_graph_summary_display( These, _, [display(['Title','Author','PubDate'])] ).
+     pub_graph_cited_by( 20195494, These ), 
+     pub_graph_summary_display( These, _, [display(['Title','Author','PubDate'])] ).
+
 ----
 1:29975690
     Author=[Tang K,Boudreau CG,Brown CM,Khadra A]
@@ -440,7 +478,8 @@ Opts = display(*).
 These = [29975690, 29694862, 29669897, 28752950, 27939309, 27588610, 27276271, 25969948, 25904526|...].
 
 
-?- pub_graph_summary_display( 20195494, _Res, true ).
+?- 
+    pub_graph_summary_display( 20195494, _Res, true ).
 
 ----
 1:20195494
@@ -448,6 +487,22 @@ These = [29975690, 29694862, 29669897, 28752950, 27939309, 27588610, 27276271, 2
     Title=Stochastic model of integrin-mediated signaling and adhesion dynamics at the leading edges of migrating cells.
 ----
 true.
+
+?- 
+    pub_graph_summary_display( cbd251a03b1a29a94f7348f4f5c2f830ab80a909, _, display(all) ).
+
+----
+1:cbd251a03b1a29a94f7348f4f5c2f830ab80a909
+	arxivId=[]
+	authors=[Graham J. L. Kemp,Nicos Angelopoulos,Peter M. D. Gray]
+	doi=10.1109/TITB.2002.1006298
+	title=Architecture of a mediator for a bioinformatics database federation
+	topics=[]
+	venue=IEEE Transactions on Information Technology in Biomedicine
+	year=2002
+----
+true.
+
 ==
 
 */
@@ -590,7 +645,9 @@ Options is a term option or list of terms from the following;
 
 ==
 ?-
-    date(D), pub_graph_cites( 20195494, Ids ), length( Ids, Len ), write( D:Len ), nl.
+    date(D), 
+    pub_graph_cites( 20195494, Ids ), 
+    length( Ids, Len ), write( D:Len ), nl.
 
 date(2018,9,22):38
 D = date(2018, 9, 22),
@@ -600,13 +657,17 @@ Len = 38.
 % pubmed does not have references cited in this paper:
 
 ?- 
-    date(D), pub_graph_cites( 12075665, Ids ), length( Ids, Len ), write( D:Len ), nl.
+    date(D), 
+    pub_graph_cites( 12075665, Ids ), 
+    length( Ids, Len ), write( D:Len ), nl.
 
 false.
 
 % whereas, semanticscholar.org finds 17 (non '') of the 21:
 ?- 
-    date(D), pub_graph_cites( cbd251a03b1a29a94f7348f4f5c2f830ab80a909, Ids ), length( Ids, Len ), write( D:Len ), nl.
+    date(D), 
+    pub_graph_cites( cbd251a03b1a29a94f7348f4f5c2f830ab80a909, Ids ), 
+    length( Ids, Len ), write( D:Len ), nl.
 
 date(2018,9,22):17
 D = date(2018, 9, 22),
@@ -860,9 +921,12 @@ Options is a single term, or list of the following terms:
  
 ==
 ?- 
-  date(Date), Opts = names(['Author','PmcRefCount','Title']),
+  date(Date), 
+  Opts = names(['Author','PmcRefCount','Title']),
   pub_graph_summary_info( 12075665, Results, Opts ),
-  write( date:Date ), nl, member( R, Results ), write( R ), nl, fail.
+  write( date:Date ), nl, 
+  member( R, Results ), write( R ), nl, 
+  fail.
 
 date:date(2018,9,22)
 Author-[Kemp GJ,Angelopoulos N,Gray PM]
@@ -871,7 +935,10 @@ Title-Architecture of a mediator for a bioinformatics database federation.
 false.
 
 
-?- pub_graph_summary_info(12075665,Res,[]), member(R,Res), write( R ), nl, fail.
+?- 
+    pub_graph_summary_info(12075665,Res,[]), 
+    member(R,Res), write( R ), nl, 
+    fail.
 
 Author-[Kemp GJ,Angelopoulos N,Gray PM]
 Title-Architecture of a mediator for a bioinformatics database federation.
@@ -885,7 +952,11 @@ PmcRefCount-3
 PubType-Journal Article
 FullJournalName-IEEE transactions on information technology in biomedicine : a publication of the IEEE Engineering in Medicine and Biology Society
 
-?- pub_graph_summary_info( cbd251a03b1a29a94f7348f4f5c2f830ab80a909, Res, true ), member( R, Res ), write( R ), nl, fail.
+?- 
+    pub_graph_summary_info( cbd251a03b1a29a94f7348f4f5c2f830ab80a909, Res, true ), 
+    member( R, Res ), write( R ), nl, 
+    fail.
+
 arxivId-[]
 authors-[Graham J. L. Kemp,Nicos Angelopoulos,Peter M. D. Gray]
 doi-10.1109/TITB.2002.1006298
@@ -894,7 +965,6 @@ topics-[]
 venue-IEEE Transactions on Information Technology in Biomedicine
 year-2002
 false.
-
 ==
 */
 pub_graph_summary_info( IdS, Results, OptS ) :-
@@ -990,7 +1060,7 @@ pub_graph_summary_info_cached_update( db_facts, Alias, Id, KVs ) :-
 %==
 %
 %@tbd add option for returning the full response of the querny (includes sections for,
-% Citation, Title, Aurhors, Affiliation and PMCID if one exists (last is in PMID section.
+% Citation, Title, Aurhors, Affiliation and PMCID if one exists (last is in PMID section).
 %
 pub_graph_abstracts( IdS, Abstracts ) :-
     non_var_list( IdS, Ids ),
@@ -1235,6 +1305,7 @@ or for the nodes at the edge of Depth.
   
 ?- 
      pub_graph_cited_by_graph( 12075665, G, cache(sqlite) ).
+
 */
 pub_graph_cited_by_graph( IdS, Graph, Args ) :-
     % non_var_list( OptS, Opts ),
