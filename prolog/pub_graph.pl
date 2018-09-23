@@ -235,10 +235,6 @@ Options should be a term or list of terms from:
     length( Ids, Len ), write( number_of:Len ), nl.
 
 http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmax=100&term=science\[journal\]+AND+breast+cancer+AND+2008\[pdat\]
-process_create(path(curl),[-o,/tmp/pl_13858_1,http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmax=100&term=science\[journal\]+AND+breast+cancer+AND+2008\[pdat\]],[])
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100  3008    0  3008    0     0   3585      0 --:--:-- --:--:-- --:--:--  4641
 tmp_file(/tmp/pl_13858_1)
 number_of:6
 St = (journal=science, [breast, cancer], pdat=2008),
@@ -251,11 +247,8 @@ Len = 6.
      St = (author='Borst Piet'),
      pub_graph_search( St, Ids, verbose(true) ),
      length( Ids, Len ), write( number_of:Len ), nl.
+
 https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmax=100&term=Borst%20Piet\[author\]
-process_create(path(curl),[-o,/tmp/swipl_18703_0,https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmax=100&term=Borst%20Piet\[author\]],[])
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100  2191    0  2191    0     0   3891      0 --:--:-- --:--:-- --:--:--  3884
 tmp_file(/tmp/swipl_18703_0)
 number_of:83
 Date = date(2018, 9, 22),
@@ -265,6 +258,7 @@ Len = 83.
 
 ?-
     date(Date), pub_graph_search( prolog, Ids ), length( Ids, Len ), write( number_of:Len ), nl.
+
 number_of:100
 Date = date(2018, 9, 22),
 Ids = ['30089663', '28647861', '28486579', '27684214', '27142769', '25509153', '24995073', '22586414', '22462194'|...],
@@ -331,7 +325,7 @@ pub_graph_summary_display( Ids ) :-
 pub_graph_summary_display( Ids, Summary ) :-
      pub_graph_summary_display( Ids, Summary, [] ).
 
-/** pub_graph_summary_display( +Ids, -Summaries, +Opts ).
+/** pub_graph_summary_display( +IdS, -Summaries, +Opts ).
 
 A wrapper around pub_graph_summary_info/3. It call this predicate with same arguments before 
 displaying the Summary information. Opts can be a single term option or a list of such terms.
@@ -342,14 +336,8 @@ Opts
      a list of article information keys that will displayed one on a line for each Id in =Ids=.
 
 ==
-?-
-     date(Date), pub_graph_search((programming,'Prolog'), Ids), Ids = [A,B,C|_], pub_graph_summary_display( [A,B,C] ).
+?-  date(Date), pub_graph_search((programming,'Prolog'), Ids), length( Ids, Len), Ids = [A,B,C|_], pub_graph_summary_display( [A,B,C] ).
 
-Date = date(2018, 9, 22),
-Ids = ['30240898', '30240537', '30240152', '30238542', '30238005', '30237735', '30236642', '30236594', '30234119'|...],
-Len = 100.
-
-?-      date(Date), pub_graph_search((programming,'Prolog'), Ids), Ids = [A,B,C|_], pub_graph_summary_display( [A,B,C] ).
 ----
 1:28486579
 	Author=[Holmes IH,Mungall CJ]
@@ -365,6 +353,7 @@ Len = 100.
 ----
 Date = date(2018, 9, 22),
 Ids = ['28486579', '24995073', '22215819', '21980276', '15360781', '11809317', '9783213', '9293715', '9390313'|...],
+Len = 43.
 A = '28486579',
 B = '24995073',
 C = '22215819'.
@@ -398,17 +387,22 @@ C = '22215819'.
 These = [29975690, 29694862, 29669897, 28752950, 27939309, 27588610, 27276271, 25969948, 25904526|...].
 
 
-?- pub_graph_summary_info( 20195494, Res, true ), member( R, Res ), write( R ), nl, fail.
-Author-[Cirit M,Krajcovic M,Choi CK,Welf ES,Horwitz AF,Haugh JM]
-Title-Stochastic model of integrin-mediated signaling and adhesion dynamics at the leading edges of migrating cells.
-...
+?- pub_graph_summary_display( 20195494, _Res, true ).
+
+----
+1:20195494
+	Author=[Cirit M,Krajcovic M,Choi CK,Welf ES,Horwitz AF,Haugh JM]
+	Title=Stochastic model of integrin-mediated signaling and adhesion dynamics at the leading edges of migrating cells.
+----
+true.
 ==
 
 */
 
-pub_graph_summary_display( Ids, Summary, Args ) :-
+pub_graph_summary_display( IdS, Summary, Args ) :-
     % pub_graph_summary_display_defaults( Defs ),
     % options_append( Opts, Defs, All ),
+    non_var_list( IdS, Ids ),
     options_append( pub_graph_summary_display, Args, Opts ),
     options( display(Disp), Opts ),
     pub_graph_summary_info( Ids, Summary, Opts ),
@@ -452,16 +446,15 @@ Options is a term option or list of terms from the following;
 
 ==
 ?-
-|    date(D), pub_graph_cited_by( 12075665, By ), length( By, Len ).
-process_create(path(curl),[-o,/tmp/swipl_17591_1,https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?report=xml&mode=text&tool=curl&db=pubmed&cmd=neighbor&linkname=pubmed_pubmed_citedin&id=12075665],[])
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100   567    0   567    0     0    796      0 --:--:-- --:--:-- --:--:--   795
+     date(D), pub_graph_cited_by( 12075665, By ), length( By, Len ).
+
 D = date(2018, 9, 22),
 By = [25825659, 19497389, 19458771],
 Len = 3.
 
-?- date(D), pub_graph_cited_by( cbd251a03b1a29a94f7348f4f5c2f830ab80a909, By ), length( By, Len ).
+?- 
+    date(D), pub_graph_cited_by( cbd251a03b1a29a94f7348f4f5c2f830ab80a909, By ), length( By, Len ).
+
 D = date(2018, 9, 22),
 By = ['2e1f686c2357cead711c8db034ff9aa2b7509621', '6f125881788967e1eec87e78b3d2db61d1a8d0ac'|...],
 Len = 12.
@@ -544,27 +537,38 @@ Options is a term option or list of terms from the following;
 
 ==
 ?-
-date(D), pub_graph_cites( 20195494, Ids ), length( Ids, Len ), write( D:Len ), nl.
+    date(D), pub_graph_cites( 20195494, Ids ), length( Ids, Len ), write( D:Len ), nl.
+
 date(2018,9,22):38
 D = date(2018, 9, 22),
 Ids = ['19160484', '19118212', '18955554', '18800171', '18586481'|...],
 Len = 38.
 
-?- 
-date(D), pub_graph_cites( 12075665, Ids ), length( Ids, Len ), write( D:Len ), nl.
-false.
+% pubmed does not have references cited in this paper:
 
-% pubmed does not have the references of this paper
+?- 
+    date(D), pub_graph_cites( 12075665, Ids ), length( Ids, Len ), write( D:Len ), nl.
+
+false.
 
 % whereas, semanticscholar.org finds 17 (non '') of the 21:
 ?- 
-date(D), pub_graph_cites( cbd251a03b1a29a94f7348f4f5c2f830ab80a909, Ids ), length( Ids, Len ), write( D:Len ), nl.
+    date(D), pub_graph_cites( cbd251a03b1a29a94f7348f4f5c2f830ab80a909, Ids ), length( Ids, Len ), write( D:Len ), nl.
 
 date(2018,9,22):17
 D = date(2018, 9, 22),
 Ids = ['6477792829dd059c7d318927858d307347c54c2e', '1448901572d1afd0019c86c42288108a94f1fb25', |...],
 Len = 17.
 
+?- 
+    pub_graph_summary_display( 12075665, Results, true ).
+
+----
+1:12075665
+	Author=[Kemp GJ,Angelopoulos N,Gray PM]
+	Title=Architecture of a mediator for a bioinformatics database federation.
+----
+Results = [12075665-['Author'-['Kemp GJ', 'Angelopoulos N', 'Gray PM'], ... - ...|...]].
 ==
 
 */
@@ -1708,7 +1712,7 @@ get_url_in_file(Url, _Verb, File) :-
 get_url_in_file(curl, URL, Verb, File) :-
         ( var(File) -> tmp_file_stream(text, File, Stream), close(Stream) ; true),
         ( Verb==true -> Args = ['-o',File,URL] ; Args = ['-s','-o',File,URL] ),
-        true_writes( Verb, process_create(path(curl),Args,[]) ),
+        % true_writes( Verb, process_create(path(curl),Args,[]) ),
        debug( pub_graph, 'Getting url via curl with args:~w', [Args] ),
         % fixme: use url_file/2
         process_create( path(curl), Args, [] ),
