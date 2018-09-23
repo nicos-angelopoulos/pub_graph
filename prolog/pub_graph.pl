@@ -230,14 +230,46 @@ Options should be a term or list of terms from:
      all breast cancer articles that were published in Science in 2008.
 ==
 ?-
-    St = (journal=science,[breast,cancer],pdat=2008),
-    pub_graph_search( St, Ids, [verbose(true),qtranslation(QTrans)] ),
-    length( Ids, Len ), write( number_of:Len ), nl.
+?- St = (journal=science,[breast,cancer],pdat=2008),                                                                                                      pub_graph_search( St, Ids, [verbose(true),qtranslation(QTrans)] ),                                                                                     length( Ids, Len ), write( number_of:Len ), nl,                                                                                                        pub_graph_summary_display( Ids, _, display(all) ).
 
-http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmax=100&term=science\[journal\]+AND+breast+cancer+AND+2008\[pdat\]
-tmp_file(/tmp/pl_13858_1)
+https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmax=100&term=science[journal]+AND+breast+cancer+AND+2008[pdat]
+tmp_file(/tmp/swipl_3884_9)
 number_of:6
-St = (journal=science, [breast, cancer], pdat=2008),
+----
+1:19008416
+	Author=[Varambally S,Cao Q,Mani RS,Shankar S,Wang X,Ateeq B,Laxman B,Cao X,Jing X,Ramnarayanan K,Brenner JC,Yu J,Kim JH,Han B,Tan P,Kumar-Sinha C,Lonigro RJ,Palanisamy N,Maher CA,Chinnaiyan AM]
+	Title=Genomic loss of microRNA-101 leads to overexpression of histone methyltransferase EZH2 in cancer.
+	Source=Science
+	Pages=1695-9
+	PubDate=2008 Dec 12
+	Volume=322
+	Issue=5908
+	ISSN=0036-8075
+	PmcRefCount=352
+	PubType=Journal Article
+	FullJournalName=Science (New York, N.Y.)
+----
+2:18927361
+	Author=Couzin J
+	Title=Genetics. DNA test for breast cancer risk draws criticism.
+	Source=Science
+...
+...
+...
+6:18239125
+	Author=[Silva JM,Marran K,Parker JS,Silva J,Golding M,Schlabach MR,Elledge SJ,Hannon GJ,Chang K]
+	Title=Profiling essential genes in human mammary cells by multiplex RNAi screening.
+	Source=Science
+	Pages=617-20
+	PubDate=2008 Feb 1
+	Volume=319
+	Issue=5863
+	ISSN=0036-8075
+	PmcRefCount=132
+	PubType=Journal Article
+	FullJournalName=Science (New York, N.Y.)
+----
+St =  (journal=science, [breast, cancer], pdat=2008),
 Ids = ['19008416', '18927361', '18787170', '18487186', '18239126', '18239125'],
 QTrans = ['("Science"[Journal] OR "Science (80- )"[Journal] OR "J Zhejiang Univ Sci"[Journal]) AND ("breast neoplasms"[MeSH Terms] OR ("breast"[All Fields] AND "neoplasms"[All Fields]) OR "breast neoplasms"[All Fields] OR ("breast"[All Fields] AND "cancer"[All Fields]) OR "breast cancer"[All Fields]) AND 2008[pdat]'],
 Len = 6.
@@ -287,28 +319,28 @@ Len = 100.
 
 */
 pub_graph_search( Sterm, Ids, Args ) :-
-     options_append( pub_graph_search, Args, Opts ),
-     url_eutils( Eutils ),
-     ( ground(Sterm) -> true; type_error(ground,Sterm) ),
-     search_term_to_query( Sterm, Query ),
-     memberchk( retmax(Ret), Opts ), 
+    options_append( pub_graph_search, Args, Opts ),
+    url_eutils( Eutils ),
+    ( ground(Sterm) -> true; type_error(ground,Sterm) ),
+    search_term_to_query( Sterm, Query ),
+    memberchk( retmax(Ret), Opts ), 
     pub_graph_search_period_opts( '', Period, Opts ),
-     atomic_list_concat( [Eutils,'esearch.fcgi?db=pubmed&retmax=',Ret,Period,'&term=',Query], Url ),
-     memberchk_optional( tmp_file(Tmp), Opts ),
-     memberchk( verbose(Verb), Opts ),
-     true_writes( Verb, Url ),
+    atomic_list_concat( [Eutils,'esearch.fcgi?db=pubmed&retmax=',Ret,Period,'&term=',Query], Url ),
+    memberchk_optional( tmp_file(Tmp), Opts ),
+    memberchk( verbose(Verb), Opts ),
+    true_writes( Verb, Url ),
     debug( pub_graph, 'Get url is: ~w', Url ),
-     get_url_in_file( Url, Verb, Tmp ),
-     true_writes( Verb, tmp_file(Tmp) ),
-     load_xml_file( Tmp, Xml ),
-     ( (memberchk(qtranslation(QTrans),Opts),
+    get_url_in_file( Url, Verb, Tmp ),
+    true_writes( Verb, tmp_file(Tmp) ),
+    load_xml_file( Tmp, Xml ),
+    ( (memberchk(qtranslation(QTrans),Opts),
         QT = 'QueryTranslation',
         search_element_in_list(Xml,QT,[],element(_,_,QTrans))) -> true; true
-     ),
-     all_subs_in_xml_single( Xml, 'IdList', 'Id', NastyIds ),
-     flatten( NastyIds, Ids ),
-     memberchk_optional( tmp_keep(Keep), Opts ),
-     true_atom_keeps_file( Keep, Tmp ).
+    ),
+    all_subs_in_xml_single( Xml, 'IdList', 'Id', NastyIds ),
+    flatten( NastyIds, Ids ),
+    memberchk_optional( tmp_keep(Keep), Opts ),
+    true_atom_keeps_file( Keep, Tmp ).
 
 /** pub_graph_summary_display( +Ids ).
 
@@ -334,22 +366,23 @@ In addition to pub_graph_summary_info/3 options this wrapper also recognises the
 Opts
   * display(Disp) 
      a list of article information keys that will displayed one on a line for each Id in =Ids=.
+     Disp values of var(Disp), '*' and 'all', list all available values.
 
 ==
 ?-  date(Date), pub_graph_search((programming,'Prolog'), Ids), length( Ids, Len), Ids = [A,B,C|_], pub_graph_summary_display( [A,B,C] ).
 
 ----
 1:28486579
-	Author=[Holmes IH,Mungall CJ]
-	Title=BioMake: a GNU make-compatible utility for declarative workflow management.
+    Author=[Holmes IH,Mungall CJ]
+    Title=BioMake: a GNU make-compatible utility for declarative workflow management.
 ----
 2:24995073
-	Author=[Melioli G,Spenser C,Reggiardo G,Passalacqua G,Compalati E,Rogkakou A,Riccio AM,Di Leo E,Nettis E,Canonica GW]
-	Title=Allergenius, an expert system for the interpretation of allergen microarray results.
+    Author=[Melioli G,Spenser C,Reggiardo G,Passalacqua G,Compalati E,Rogkakou A,Riccio AM,Di Leo E,Nettis E,Canonica GW]
+    Title=Allergenius, an expert system for the interpretation of allergen microarray results.
 ----
 3:22215819
-	Author=[Mørk S,Holmes I]
-	Title=Evaluating bacterial gene-finding HMM structures as probabilistic logic programs.
+    Author=[Mørk S,Holmes I]
+    Title=Evaluating bacterial gene-finding HMM structures as probabilistic logic programs.
 ----
 Date = date(2018, 9, 22),
 Ids = ['28486579', '24995073', '22215819', '21980276', '15360781', '11809317', '9783213', '9293715', '9390313'|...],
@@ -357,6 +390,26 @@ Len = 43.
 A = '28486579',
 B = '24995073',
 C = '22215819'.
+==
+
+==
+?- Opts = display(*), pub_graph_summary_display( 30235570, _, Opts ).
+----
+1:30235570
+    Author=[Morgan CC,Huyck S,Jenkins M,Chen L,Bedding A,Coffey CS,Gaydos B,Wathen JK]
+    Title=Adaptive Design: Results of 2012 Survey on Perception and Use.
+    Source=Ther Innov Regul Sci
+    Pages=473-481
+    PubDate=2014 Jul
+    Volume=48
+    Issue=4
+    ISSN=2168-4790
+    PmcRefCount=0
+    PubType=Journal Article
+    FullJournalName=Therapeutic innovation & regulatory science
+----
+Opts = display(*).
+
 ==
 
 ==
@@ -391,8 +444,8 @@ These = [29975690, 29694862, 29669897, 28752950, 27939309, 27588610, 27276271, 2
 
 ----
 1:20195494
-	Author=[Cirit M,Krajcovic M,Choi CK,Welf ES,Horwitz AF,Haugh JM]
-	Title=Stochastic model of integrin-mediated signaling and adhesion dynamics at the leading edges of migrating cells.
+    Author=[Cirit M,Krajcovic M,Choi CK,Welf ES,Horwitz AF,Haugh JM]
+    Title=Stochastic model of integrin-mediated signaling and adhesion dynamics at the leading edges of migrating cells.
 ----
 true.
 ==
@@ -418,7 +471,7 @@ pub_graph_summary_display_info( SummaryIn, Disp ) :-
      write( '----' ), nl,
      nth1( N, Summary, Id-Rec ),
      write( N:Id ), nl,
-     findall( _, (member(D-Val,Rec),once((var(Disp);member(D,Disp))),put(0'\t), write(D=Val),nl), _ ), 
+     findall( _, (member(D-Val,Rec),once((var(Disp);Disp=all;Disp='*';member(D,Disp))),put(0'\t), write(D=Val),nl), _ ), 
      write( '----' ), nl, fail.
 pub_graph_summary_display_info( _Summary, _Disp ).
 
@@ -565,8 +618,8 @@ Len = 17.
 
 ----
 1:12075665
-	Author=[Kemp GJ,Angelopoulos N,Gray PM]
-	Title=Architecture of a mediator for a bioinformatics database federation.
+    Author=[Kemp GJ,Angelopoulos N,Gray PM]
+    Title=Architecture of a mediator for a bioinformatics database federation.
 ----
 Results = [12075665-['Author'-['Kemp GJ', 'Angelopoulos N', 'Gray PM'], ... - ...|...]].
 ==
@@ -1642,7 +1695,7 @@ search_term_to_query( (A;B), Query ) :-
 search_term_to_query( (A=B), Query ) :-
      !,
      maplist( quote_curl_atom, [A,B], [Aq,Bq] ),
-     atomic_list_concat( [Bq,'\\[',Aq,'\\]'], Query ).
+     atomic_list_concat( [Bq,'[',Aq,']'], Query ).
 search_term_to_query( C, Query ) :-
      pg_en_list( C, Clist ),
      maplist( quote_curl_atom, Clist, Qlist ),
@@ -1696,17 +1749,17 @@ true_writes( _Opts, _Report ).
 %
 get_url_in_file(Url, _Verb, File) :-
     ( var(File) -> tmp_file_stream(text, File, Stream), close(Stream) ; true),
-	debug( pub_grapsh, 'Downloading URL: ~p, onto file: ~p', [Url,File] ),
-	setup_call_cleanup(
-	    http_open(Url, In,
-		      [ % cert_verify_hook(ssl_verify) % checkme:
-		      ]),
-	    setup_call_cleanup(
-	    open(File, write, Out, [type(binary)]),
-	    copy_stream_data(In, Out),
-	    close(Out)),
-	    close(In)
-	).
+    debug( pub_grapsh, 'Downloading URL: ~p, onto file: ~p', [Url,File] ),
+    setup_call_cleanup(
+        http_open(Url, In,
+              [ % cert_verify_hook(ssl_verify) % checkme:
+              ]),
+        setup_call_cleanup(
+        open(File, write, Out, [type(binary)]),
+        copy_stream_data(In, Out),
+        close(Out)),
+        close(In)
+    ).
 
 % this was the old version: currently not called from anywhere 18.09.22
 get_url_in_file(curl, URL, Verb, File) :-
