@@ -18,6 +18,9 @@
                    ]
          ).
 
+:- use_module(library(apply)).
+:- use_module(library(debug)).
+:- use_module(library(lists)).
 :- use_module(library(http/http_open)).   % http_open/3
 :- use_module(library(http/json)).        % json_read/2,3
 
@@ -2025,7 +2028,10 @@ mime_file_type(_, binary).
 % mime_file_type(text/_, binary). % was this changed it above ?
 
 a_month_ago( date(Y1,M1,D1) ) :-
-     date( date(Y,M,D) ),
+     % date( date(Y,M,D) ),
+	get_time( T ),
+     stamp_date_time( T, Date, local ), 
+	Date = date(Y,M,D,_H,_N,_S,_,_,_),
      ( M =:= 1 -> Y1 is Y - 1,
                   M1 is 12,
                   D is D1   % Dec. has at least as many days as Jan.
