@@ -18,11 +18,21 @@
                    ]
          ).
 
+:- use_module(library(sgml)).
 :- use_module(library(apply)).
 :- use_module(library(debug)).
 :- use_module(library(lists)).
+:- use_module(library(ordsets)).          % ord_add_element/3.
 :- use_module(library(http/http_open)).   % http_open/3
 :- use_module(library(http/json)).        % json_read/2,3
+:- use_module(library(http/html_write) ).
+
+% stoics.org.uk  libs:
+:- use_module( library(options) ).
+
+:- dynamic pub_graph_cache:cited_by/3.
+:- dynamic pub_graph_cache:info/4.
+:- dynamic pub_graph_cache:info_date/2.
 
 /**  <module> Access, cache and visualise citation relations in publications servers.
 
@@ -56,6 +66,7 @@ on proSQlite (both available as SWI packs and from http://stoics.org.uk/~nicos/s
 @version 0.1.0 2014/7/22 (was pubmed)
 @version 1.0   2018/9/22
 @version 1.1   2018/9/23, wrap/hide caching libs errors
+@version 1.2   2023/9/20, added Gap, much better search for title + affiliation + title/abstract
 @license MIT
 @author Nicos Angelopoulos
 @see http://stoics.org.uk/~nicos/sware/pub_graph
@@ -70,12 +81,6 @@ on proSQlite (both available as SWI packs and from http://stoics.org.uk/~nicos/s
           key an enumerate type, which will save loads of space
 
 */
-
-:- ensure_loaded( library(sgml) ).
-:- ensure_loaded( library(ordsets) ).  % ord_add_element/3.
-:- ensure_loaded( library(http/html_write) ).
-
-:- use_module( library(options) ).
 
 % This does (no longer ?) work: [try abs_fname/n]
 :- ( catch(use_module(library(prosqlite)),_,fail) -> true
@@ -94,12 +99,12 @@ on proSQlite (both available as SWI packs and from http://stoics.org.uk/~nicos/s
 
 % Section: defaults, shortcuts.
 
-file_type_extension( csv, csv ).
-file_type_extension( prolog, pl ).
-file_type_extension( sqlite, sqlite ).
+file_type_extension(csv, csv).
+file_type_extension(prolog, pl).
+file_type_extension(sqlite, sqlite).
 
-url_eutils( 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/' ).
-url_efetch_pubmed( 'efetch.fcgi?db=pubmed' ).
+url_eutils('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/').
+url_efetch_pubmed('efetch.fcgi?db=pubmed').
 
 url_semscholar('http://api.semanticscholar.org/v1/paper/').
 
@@ -113,21 +118,9 @@ default_names( ncbi, Names ) :-
               'Volume','Issue','ISSN','PmcRefCount',
               'PubType','FullJournalName'].
 
-pub_graph_search_defaults( [verbose(false),retmax(100),tmp_keep(false)] ).
-
-% pub_graph_summary_display_defaults( [display(['Title','Author']),names(Names)] ) :-
-%     default_names( Names ).
-pub_graph_summary_display_defaults( [display([title,'Title',authors,'Author'])] ).
-
 pub_graph_graph(true).  % needed for options_append/3
 pub_graph_graph_defaults( [depth(0),verbose(false),update(true),date(AgesAgo),flat(false)] ) :-
      a_month_ago( AgesAgo ).
-
-pub_graph_treadmill_defaults( [file(graph_treadmilling),single_file(false),depth(5),ext(pl)] ).
-
-:- dynamic pub_graph_cache:cited_by/3.
-:- dynamic pub_graph_cache:info/4.
-:- dynamic pub_graph_cache:info_date/2.
 
 /** pub_graph_id( +Id, -IdType ).
 
@@ -190,18 +183,24 @@ Get version information and date of publication.
 ?-
     pub_graph_version(V,D).
 
-V = 1:1:0,
-D = date(2018, 9, 23).
+V = 1:2:0,
+D = date(2023, 9, 20).
 ==
 
 */
-pub_graph_version( 1:1:0, date(2018,9,23) ).
+pub_graph_version( 1:2:0, date(2023,9,20) ).
+% pub_graph_version( 1:1:0, date(2018,9,23) ).
 % pub_graph_version( 1:0:0, date(2018,9,22) ).
 % pub_graph_version( 0:0:3, date(2012,08,15) ).
 
-
-pub_graph_search( STerm, Ids ) :-
-     pub_graph_search( STerm, Ids, [] ).
+pub_graph_search_defaults( Defs ) :- 
+               Defs = [
+                        gap(0),
+                        retmax(100),
+                        quote_value(true),
+                        tmp_keep(false),
+                        verbose(false)
+                        ].
 
 /** pub_graph_search( +STerm, -Ids ).
     pub_graph_search( +STerm, -Ids, +Options ).
@@ -221,30 +220,38 @@ The predicate constructs a query that is posted via the http API provided
 by NCBI (http://www.ncbi.nlm.nih.gov/books/NBK25500/).
   
 Options should be a term or list of terms from: 
-  * retmax(RetMax)
-     the maximum number of records that will be returned def: 100
-  * verbose(Verbose) 
-     if =|Verbose == true|= then the predicate is verbose about its progress by,
-     for instance, requesting query is printed on current output stream.
-  * tmp_file(Tmp)  
-     file to use, or when =Tmp= is variable the file that was used
-     to receive the results from pub_graph.
-  * tmp_keep(Keep) 
-     keep the file with the xml result iff =|Keep==true|=
-  * qtranslation(QTrans) 
-     return in =QTrans= the actual query ran on the 
-     the pub_graph server.
-  * reldate(Rdat)
-     When reldate is set to an integer n, ELink returns only those items 
-     that have a date specified by datetype within the last n days.
-  * mindate(Ndat)
-     Date range used to limit a link operation by the date specified by datetype. 
-     These two parameters (mindate, maxdate) must be used together to specify an arbitrary date range. 
-     The general date format is YYYY/MM/DD, and these variants are also allowed: YYYY, YYYY/MM.
+  * gap(Gap=0)
+    Gap allowed for approximate reasoning in =ncbi= terms: Title, Title/Abstract and Affiliation. 
+    The higher the number the looser the match. The default allows for no intervening words, so only
+    exact sub-matches will be returned (see example: fixme below)
+    see: https://pubmed.ncbi.nlm.nih.gov/help/#proximity-searching
   * maxdate(Xdat)
-     see mindate Option
-     For instance, taking an example from the url we show how to find 
-     all breast cancer articles that were published in Science in 2008.
+    see mindate Option
+    For instance, taking an example from the url we show how to find 
+    all breast cancer articles that were published in Science in 2008.
+  * mindate(Ndat)
+    Date range used to limit a link operation by the date specified by datetype. 
+    These two parameters (mindate, maxdate) must be used together to specify an arbitrary date range. 
+    The general date format is YYYY/MM/DD, and these variants are also allowed: YYYY, YYYY/MM.
+  * qtranslation(QTrans) 
+    return in =QTrans= the actual query ran on the 
+    the pub_graph server.
+  * quote_value(Qv=true)
+    whether to quote values of K=V search terms
+  * reldate(Rdat)
+    When reldate is set to an integer n, ELink returns only those items 
+    that have a date specified by datetype within the last n days.
+  * retmax(RetMax)
+    the maximum number of records that will be returned def: 100
+  * tmp_file(Tmp)  
+    file to use, or when =Tmp= is variable the file that was used
+    to receive the results from pub_graph.
+  * tmp_keep(Keep) 
+    keep the file with the xml result iff =|Keep==true|=
+  * verbose(Verbose) 
+    if =|Verbose == true|= then the predicate is verbose about its progress by,
+    for instance, requesting query is printed on current output stream.
+
 ==
 ?-
     St = (journal=science,[breast,cancer],pdat=2008),
@@ -345,16 +352,88 @@ Len = 100.
 true.
 ==
 
+Version 0:3 (pub_graph_version(1:2:0,_D)).
+==
+?- 
+     date(Date), pub_graph_search(title='Bayesian networks elucidate', Ids, true), length(Ids,Len).
+Date = date(2023, 9, 20),
+Ids = ['35379892'],
+Len = 1.
+
+?- 
+     date(Date), pub_graph_search(title='Bayesian elucidate', Ids, true), length(Ids,Len).
+
+Date = date(2023, 9, 20),
+Ids = [],
+Len = 0.
+
+?- 
+     date(Date), pub_graph_search(title='Bayesian elucidate', Ids, gap(1)), length(Ids, Len),  pub_graph_summary_display(Ids, _, true).
+
+----
+1:35379892
+	Author=[Angelopoulos N,Chatzipli A,Nangalia J,Maura F,Campbell PJ]
+	Title=Bayesian networks elucidate complex genomic landscapes in cancer.
+----
+Date = date(2023, 9, 20),
+Ids = ['35379892'],
+Len = 1.
+
+?-
+     date(D),
+     write('Appears in abstract: "explainable Artificial Intelligence models"'), nl,
+     pub_graph_search('Title/Abstract'='explainable Artificial Intelligence models', Ids, true),
+     pub_graph_summary_display(Ids).
+
+1
+...
+10:32417928
+	Author=[Payrovnaziri SN,Chen Z,Rengifo-Moreno P,Miller T,Bian J,Chen JH,Liu X,He Z]
+	Title=Explainable artificial intelligence models using real-world electronic health record data: a systematic scoping review.
+
+?- 
+     date(D), pub_graph_search('Title/Abstract'='explainable Intelligence models', Ids, true).
+
+D = date(2023, 9, 20),
+Ids = [].
+
+?- 
+     date(D), pub_graph_search((tiab='explainable Intelligence models',affiliation=sanger), Ids, gap(1)).
+
+D = date(2023, 9, 20),
+Ids = ['35379892'].
+==
+
+Also 0:3 added quote_value(Qv). Compare:
+==
+?- date(Date), pub_graph_search(title='Bayesian networks elucidate', Ids, true), length(Ids,Len).
+Date = date(2023, 9, 20),
+Ids = ['35379892'],
+Len = 1.
+
+?- date(Date), pub_graph_search(title='Bayesian networks elucidate', Ids, quote_value(false)), length(Ids,Len).
+Date = date(2023, 9, 20),
+Ids = ['35923659', '35379892', '32609725', '29055062', '27303742', '26362267'],
+Len = 6.
+==
+
 @author nicos angelopoulos
 @version  0:1 2012/07/15
 @version  0:2 2018/09/22, small update on \ escape on eutils, ncbi, queries
+@version  0:3 2023/09/20, added Gap, much better search for title + affiliation + title/abstract
 
 */
+
+pub_graph_search( STerm, Ids ) :-
+     pub_graph_search( STerm, Ids, [] ).
+
 pub_graph_search( Sterm, Ids, Args ) :-
     options_append( pub_graph_search, Args, Opts ),
     url_eutils( Eutils ),
     ( ground(Sterm) -> true; type_error(ground,Sterm) ),
-    search_term_to_query( Sterm, Query ),
+    options( gap(Gap), Opts ),
+    options( quote_value(Qv), Opts ),
+    search_term_to_query( Sterm, Gap, Qv, Query ),
     memberchk( retmax(Ret), Opts ), 
     pub_graph_search_period_opts( '', Period, Opts ),
     atomic_list_concat( [Eutils,'esearch.fcgi?db=pubmed&retmax=',Ret,Period,'&term=',Query], Url ),
@@ -388,6 +467,10 @@ pub_graph_summary_display( Ids ) :-
 */
 pub_graph_summary_display( Ids, Summary ) :-
      pub_graph_summary_display( Ids, Summary, [] ).
+
+% pub_graph_summary_display_defaults( [display(['Title','Author']),names(Names)] ) :-
+%     default_names( Names ).
+pub_graph_summary_display_defaults( [display([title,'Title',authors,'Author'])] ).
 
 /** pub_graph_summary_display( +IdS, -Summaries, +Opts ).
 
@@ -530,7 +613,6 @@ pub_graph_summary_display_info( SummaryIn, Disp ) :-
      write( '----' ), nl, fail.
 pub_graph_summary_display_info( _Summary, _Disp ).
 
-
 %
 % Redirects to pub_graph_cited_by( Id, Ids, [] ).
 %
@@ -637,7 +719,7 @@ pub_graph_cites( Id, Ids ) :-
 /** pub_graph_cites( +Id, -Ids ).
     pub_graph_cites( +Id, -Ids, +Options ). 
 
-Ids is the list of pub_graph Ids that are cited by Id. 
+Ids is the list of pub_graph Ids (pub_graph_id/2) that are cited by Id. 
 
 Options is a term option or list of terms from the following;
   * verbose(Verb)
@@ -685,6 +767,10 @@ Len = 17.
 Results = [12075665-['Author'-['Kemp GJ', 'Angelopoulos N', 'Gray PM'], ... - ...|...]].
 ==
 
+@author nicos angelopoulos
+@version  0:1 2018/9/22
+@see pub_graph_id/2
+
 */
 pub_graph_cites( Id, Ids, OptsIn ) :-
     non_var_list( OptsIn, Opts ),
@@ -717,30 +803,38 @@ pub_graph_table_defaults( Defs ) :-
 
 /** pub_graph_table( +Ids, -Rows, +Opts ).
 
-fixme
-Assumes jif predicate.
+Create a table of information relating to IDs.
+
+Can include journal impact factor if jif/6 is provided.
+
+Output rows contain #citing, [IF ,] Date, Journal, Title, Author, (Title urled to pubmed/$id)
 
 Opts
-
   * include_if(IF=false)
-  whether to include Impact Factor (IF) column (if true requires jif/6).
+     whether to include Impact Factor (IF) column (if true requires jif/6)
 
   * missing_if(MIF=throw)
-  what to do when a journal has no impact factor: [throw,has(Val),quite(Val)].
+     what to do when a journal has no impact factor: [throw,has(Val),quite(Val)]
 
   * output(Type=html)
-  type of output, if file is expected (see stem), in [csv,?pdf?,html]
+     type of output, if file is expected (see stem), in [csv,?pdf?,html]
 
-  * search(Search='No search term available'),
-  search term corresponding to the Ids 
+  * search(Search='No search term available')
+     search term corresponding to the Ids
 
   * spy(Spy=[])
-  A number of ids to spy (should be atomic).
+     A number of ids to spy (list of atoms)
 
   * stem(Stem)
-  when present a file <Stem>.<Type> is created.
+     when present a file <Stem>.<Type> is created
 
-Output rows should contain #citing, [IF ,] Date, Journal, Title, Author, (Title urled to pubmed/$id)
+==
+     ?- 
+     pub_graph_table
+==
+
+@author nicos angelopoulos
+@version  0:1 2018/9/20
 
 */
 pub_graph_table( Ids, Rows, Args ) :-
@@ -1350,6 +1444,13 @@ opts_list_closes_cby_cache( COpts ) :-
      pub_graph_cache_save( Type, Handle, cited_by/3, [] ).
 opts_list_closes_cby_cache( _ ).
 
+pub_graph_cited_by_treadmill_defaults( Defs ) :-
+          Defs      =  [ depth(5),
+                         ext(pl),
+                         file(graph_treadmilling),
+                         single_file(false)
+                       ].
+
 /** pub_graph_cited_by_treadmill( +Ids, -Graph, +Opts ).
 
      Use iterative increase of depth limit on pumed_cited_by_graph/3 with 
@@ -1369,7 +1470,7 @@ opts_list_closes_cby_cache( _ ).
 */
 pub_graph_cited_by_treadmill( Ids, Graph, Args ) :-
      % pub_graph_treadmill_defaults( Defs ),
-     options_append( pub_graph_treadmill, Args, Opts ),
+     options_append( pub_graph_cited_by_treadmill, Args, Opts ),
      options( file(File), Opts ),
      options( single_file(Single), Opts ),
      options( depth(D), Opts ),
@@ -1753,28 +1854,54 @@ pub_graph_elink_date_option( reldate ).
 pub_graph_elink_date_option( mindate ).
 pub_graph_elink_date_option( maxdate ).
 
-%% search_term_to_query( Sterm, Query ).
+%% search_term_to_query(+Sterm, +Gap, +Qv, -Query).
 %
 %  Convert a pubmed term to an atomic query that can be passed through http.
 %
-search_term_to_query( (A,B), Query ) :-
+%  Gap is an integer, used for fields that take approximate search (0 is strictest for allowing 0 interving words)
+%  Qv is the quote_value(Qv) option value.
+%
+%
+search_term_to_query( (A,B), Gap, Qv, Query ) :-
      !,
-     search_term_to_query( A, Aq ),
-     search_term_to_query( B, Bq ),
+     search_term_to_query( A, Gap, Qv, Aq ),
+     search_term_to_query( B, Gap, Qv, Bq ),
      atomic_list_concat( [Aq,'+AND+',Bq], Query ).
-search_term_to_query( (A;B), Query ) :-
+search_term_to_query( (A;B), Gap, Qv, Query ) :-
      !,
-     search_term_to_query( A, Aq ),
-     search_term_to_query( B, Bq ),
+     search_term_to_query( A, Gap, Qv, Aq ),
+     search_term_to_query( B, Gap, Qv, Bq ),
      atomic_list_concat( [Aq,'OR',Bq], '+', Query ).
-search_term_to_query( (A=B), Query ) :-
+search_term_to_query( (A=B), Gap, Qv, Query ) :-
      !,
      maplist( quote_curl_atom, [A,B], [Aq,Bq] ),
-     atomic_list_concat( [Bq,'[',Aq,']'], Query ).
-search_term_to_query( C, Query ) :-
+     search_term_proximity_field( A, Gap, Pxf ),
+     ( Qv == false ->   % true is defaulty
+          atomic_list_concat( [Bq,'[',Aq,Pxf,']'], Query )
+          ;
+          atomic_list_concat( ['%22',Bq,'%22','[',Aq,Pxf,']'], Query )
+     ).
+search_term_to_query( C, _Gap, _Qv, Query ) :-
      pg_en_list( C, Clist ),
      maplist( quote_curl_atom, Clist, Qlist ),
      atomic_list_concat( Qlist, '+', Query ).
+
+search_term_proximity_field( A, Gap, Pxf ) :-
+     search_term_proximity_field( A ),
+     !,
+     atomic_list_concat( [':~',Gap], Pxf ).
+search_term_proximity_field( _A, _Gap, '' ).
+
+search_term_proximity_field('Affiliation').
+search_term_proximity_field(affiliation).
+search_term_proximity_field('Title').
+search_term_proximity_field(title).
+search_term_proximity_field('Title/Abstract').
+search_term_proximity_field('title/abstract').
+% abbreviations
+search_term_proximity_field(ti).   % Title
+search_term_proximity_field(tiab). % Title/Abstract
+search_term_proximity_field(ad).   % affiliation ? 
 
 % very basic. for now we are just translating space to %20
 % we should use some SWI http internals here
@@ -1786,6 +1913,8 @@ quote_curl_atom( In, Out ) :-
      atom_codes( Out, OutCs ).
 
 quote_curl_code( 0' , [0'%,0'2,0'0] ) :- !.
+quote_curl_code( 0'", [0'%,0'2,0'2] ) :- !.
+% quote_curl_code( 0' , [0'+] ) :- !.
 quote_curl_code( Code, Code ).
      
 %% memberchk_optional( Elem, List ).

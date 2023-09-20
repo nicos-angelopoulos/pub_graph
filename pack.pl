@@ -1,6 +1,6 @@
 name(pub_graph ).
 title('Access, cache and visualise citation relations in publications servers').
-version('1.1').
+version('1.2').
 author('Nicos Angelopoulos', 'http://stoics.org.uk/~nicos').
 packager('Nicos Angelopoulos', 'http://stoics.org.uk/~nicos').
 maintainer('Nicos Angelopoulos', 'http://stoics.org.uk/~nicos').

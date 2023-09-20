@@ -1,13 +1,18 @@
 ---   Releases   ---
 --------------------
 
-1.2   
-      23.09.22   DEPS:    explicit dependencies to lists, apply and debug.
+1.2              @ 23.09.20
+      23.09.20   CHANGE:  better support for text searching (title, title/abstract and affiliation)
+                 IFACE:   options gap(1) and quote_value(true)
+
+      23.09.12   DEPS:    explicit dependencies to lists, apply and debug.
                  DEPS:    replace date/1 with get_time/1 + samp_date_time/3.
 
-1.1          @   18.09.23
+
+1.1              @ 18.09.23
       18.09.23   FIX:     wrap caching lib omissions better with less messaging
-1.0          @   18.09.22
+
+1.0              @ 18.09.22
       18.09.22   ADDED:   support for Semantic Scholar
                  CHANGE:  use SWI's http_open/3 instead of curl. It should now be more OS tolerant.
                  DOC:     updated all examples. added Semantic Scholar support
